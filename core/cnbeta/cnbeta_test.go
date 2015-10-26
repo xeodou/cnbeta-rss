@@ -38,8 +38,7 @@ func TestLoadRss(t *testing.T) {
 	wg.Add(1)
 
 	tmp := &Tmp{}
-	cb := NewCb()
-	cb.AddListener(tmp)
+	cb := &CnBeta{tmp}
 	cb.Run()
 
 	wg.Wait()

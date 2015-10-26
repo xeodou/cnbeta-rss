@@ -30,14 +30,6 @@ func NewCnBeta(l Listener) *CnBeta {
 	return &CnBeta{l}
 }
 
-func NewCb() *CnBeta {
-	return &CnBeta{}
-}
-
-func (cb *CnBeta) AddListener(l Listener) {
-	cb.listener = l
-}
-
 func (cb *CnBeta) Run() {
 	t := async.NewTask(RSS(), cb)
 	t.Runtask()
