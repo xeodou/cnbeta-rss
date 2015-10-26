@@ -45,7 +45,7 @@ public class ItemListFragment extends ListFragment {
         /**
          * Callback for when an item has been selected.
          */
-        void onItemSelected(String title, String des);
+        void onItemSelected(String title, String link);
     }
 
     /**
@@ -54,7 +54,7 @@ public class ItemListFragment extends ListFragment {
      */
     private static Callbacks rssCallback = new Callbacks() {
         @Override
-        public void onItemSelected(String title, String des) {
+        public void onItemSelected(String title, String link) {
         }
     };
 
@@ -120,7 +120,7 @@ public class ItemListFragment extends ListFragment {
         // Notify the active callbacks interface (the activity, if the
         // fragment is attached to one) that an item has been selected.
         Cb.RssItem item = (Cb.RssItem) getListAdapter().getItem(position);
-        mCallbacks.onItemSelected(item.getTitle(), item.getDescription());
+        mCallbacks.onItemSelected(item.getTitle(), item.getLink());
     }
 
     @Override

@@ -1,7 +1,12 @@
 package com.xeodou.cnbeta;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
@@ -38,31 +43,49 @@ public class ItemListActivity extends AppCompatActivity
     private ItemListFragment listFragment;
     private Cb.CnBeta cbTask = Cb.NewCb();
 
-    private class RssEvent implements Cb.Listener {
+
+    private final int CB_TASK_END = 0;
+    private final int CB_TASK_FAILED=1;
+    private final int CB_TASK_SUCCESS=2;
+
+    private Handler handler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case CB_TASK_END:
+                    swiplayout.setRefreshing(false);
+                    break;
+                case CB_TASK_FAILED:
+                    Toast.makeText(ItemListActivity.this, (String)msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                case CB_TASK_SUCCESS:
+                    listFragment.setFeed((Cb.RssFeed)msg.obj);
+                    break;
+            }
+        }
+    };
+
+    private class RssEvent extends Cb.Listener.Stub {
 
         @Override
-        public void OnFailure(String s) {
-            Toast.makeText(ItemListActivity.this, s, Toast.LENGTH_SHORT).show();
-            swiplayout.setRefreshing(false);
+        public void OnFailure(final String s) {
+            Message completeMessage =
+                    handler.obtainMessage(CB_TASK_FAILED, s);
+            completeMessage.sendToTarget();
         }
 
         @Override
         public void OnSuccess(Cb.RssXml rssXml) {
-            listFragment.setFeed(rssXml.getChannel());
-            if (swiplayout.isRefreshing()) {
-                swiplayout.setRefreshing(false);
-            }
-            swiplayout.setRefreshing(false);
+            Message completeMessage =
+                    handler.obtainMessage(CB_TASK_SUCCESS, rssXml.getChannel());
+            completeMessage.sendToTarget();
         }
 
         @Override
-        public Seq.Ref ref() {
-            return cbTask.ref();
-        }
-
-        @Override
-        public void call(int i, Seq seq, Seq seq1) {
-            cbTask.call(i, seq, seq1);
+        public void OnEnd() {
+            Message completeMessage =
+                    handler.obtainMessage(CB_TASK_END);
+            completeMessage.sendToTarget();
         }
     }
 
@@ -91,11 +114,7 @@ public class ItemListActivity extends AppCompatActivity
             listFragment.setActivateOnItemClick(true);
         }
 
-        cbTask = Cb.NewCb();
-        cbTask.AddListener(new RssEvent());
-
-        this.onRefresh();
-
+        cbTask = Cb.NewCnBeta(new RssEvent());
 
         // TODO: If exposing deep links into your app, handle intents here.
     }
@@ -110,14 +129,14 @@ public class ItemListActivity extends AppCompatActivity
      * indicating that the item with the given ID was selected.
      */
     @Override
-    public void onItemSelected(String title, String des) {
+    public void onItemSelected(String title, String link) {
         if (mTwoPane) {
             // In two-pane mode, show the detail view in this activity by
             // adding or replacing the detail fragment using a
             // fragment transaction.
             Bundle arguments = new Bundle();
             arguments.putString(ItemDetailFragment.ARG_RSS_TITLE, title);
-            arguments.putString(ItemDetailFragment.ARG_RSS_LINK, des);
+            arguments.putString(ItemDetailFragment.ARG_RSS_LINK, link);
             ItemDetailFragment fragment = new ItemDetailFragment();
             fragment.setArguments(arguments);
             getSupportFragmentManager().beginTransaction()
@@ -129,7 +148,7 @@ public class ItemListActivity extends AppCompatActivity
             // for the selected item ID.
             Intent detailIntent = new Intent(this, ItemDetailActivity.class);
             detailIntent.putExtra(ItemDetailFragment.ARG_RSS_TITLE, title);
-            detailIntent.putExtra(ItemDetailFragment.ARG_RSS_LINK, des);
+            detailIntent.putExtra(ItemDetailFragment.ARG_RSS_LINK, link);
             startActivity(detailIntent);
         }
     }
@@ -138,9 +157,8 @@ public class ItemListActivity extends AppCompatActivity
     @Override
     public void onRefresh() {
         if (!swiplayout.isRefreshing()) {
-
             swiplayout.setRefreshing(true);
-            cbTask.Run();
         }
+        cbTask.Run();
     }
 }
