@@ -41,7 +41,7 @@ public class ItemListActivity extends AppCompatActivity
     private boolean mTwoPane;
     private SwipeRefreshLayout swiplayout;
     private ItemListFragment listFragment;
-    private Cb.CnBeta cbTask = Cb.NewCb();
+    private Cb.CnBeta cbTask;
 
 
     private final int CB_TASK_END = 0;
