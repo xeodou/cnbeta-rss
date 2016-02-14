@@ -2,9 +2,14 @@ package com.xeodou.cnbeta;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.v4.app.ListFragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.View;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import go.cb.Cb;
 
@@ -17,7 +22,7 @@ import go.cb.Cb;
  * Activities containing this fragment MUST implement the {@link Callbacks}
  * interface.
  */
-public class ItemListFragment extends ListFragment {
+public class ItemListFragment extends SwipeRefreshListFragment {
 
     /**
      * The serialization (saved instance state) Bundle key representing the
@@ -48,6 +53,10 @@ public class ItemListFragment extends ListFragment {
         void onItemSelected(String title, String link);
     }
 
+    private final static int CB_TASK_END = 0;
+    private final static int CB_TASK_FAILED=1;
+    private final static int CB_TASK_SUCCESS=2;
+
     /**
      * A dummy implementation of the {@link Callbacks} interface that does
      * nothing. Used only when this fragment is not attached to an activity.
@@ -57,6 +66,33 @@ public class ItemListFragment extends ListFragment {
         public void onItemSelected(String title, String link) {
         }
     };
+
+    private Handler handler;
+    private Cb.CnBeta cbTask;
+
+    private class RssEvent extends Cb.Listener.Stub {
+
+        @Override
+        public void OnFailure(final String s) {
+            Message completeMessage =
+                    handler.obtainMessage(CB_TASK_FAILED, s);
+            completeMessage.sendToTarget();
+        }
+
+        @Override
+        public void OnSuccess(Cb.RssXml rssXml) {
+            Message completeMessage =
+                    handler.obtainMessage(CB_TASK_SUCCESS, rssXml.getChannel());
+            completeMessage.sendToTarget();
+        }
+
+        @Override
+        public void OnEnd() {
+            Message completeMessage =
+                    handler.obtainMessage(CB_TASK_END);
+            completeMessage.sendToTarget();
+        }
+    }
 
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
@@ -74,6 +110,24 @@ public class ItemListFragment extends ListFragment {
         // TODO: replace with a real list adapter.
         setListAdapter(new RssAdapter(getActivity(), rss.getChannel()));
 
+        handler =  new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case CB_TASK_END:
+                        setRefreshing(false);
+                        break;
+                    case CB_TASK_FAILED:
+                        Toast.makeText(getActivity(), (String)msg.obj, Toast.LENGTH_SHORT).show();
+                        break;
+                    case CB_TASK_SUCCESS:
+                        setFeed((Cb.RssFeed)msg.obj);
+                        break;
+                }
+            }
+        };
+
+        cbTask = Cb.NewCnBeta(new RssEvent());
     }
 
     public void setFeed(Cb.RssFeed feed) {
@@ -91,6 +145,16 @@ public class ItemListFragment extends ListFragment {
                 && savedInstanceState.containsKey(STATE_ACTIVATED_POSITION)) {
             setActivatedPosition(savedInstanceState.getInt(STATE_ACTIVATED_POSITION));
         }
+
+        cbTask.Run();
+        setRefreshing(true);
+
+        setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                cbTask.Run();
+            }
+        });
     }
 
     @Override
