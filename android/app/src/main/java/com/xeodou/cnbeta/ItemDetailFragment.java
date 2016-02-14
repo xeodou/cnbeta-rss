@@ -52,7 +52,7 @@ public class ItemDetailFragment extends Fragment {
 
         // Show the dummy content as text in a TextView.
         if (link != "") {
-            ((WebView) rootView.findViewById(R.id.item_detail)).loadUrl("http://gxc.google.com.hk/gwt/x?u=" + link);
+            ((WebView) rootView.findViewById(R.id.item_detail)).loadUrl("http://googleweblight.com/?lite_url=" + link + "&f=1&s=0");
         }
 
         return rootView;
